@@ -35,7 +35,7 @@ public:
 
 YoloxModel::YoloxModel() : BaseModel(), pimpl_(std::make_unique<Impl>())
 {
-  RCLCPP_INFO(get_logger(), "YOLOX model instance created with default settings");
+  MODEL_INFO("YOLOX model instance created with default settings");
 
   // Default class names (can be overridden with set_class_names)
   pimpl_->class_names = {"empty"};
@@ -47,17 +47,16 @@ void YoloxModel::set_class_names(const std::vector<std::string> & class_names)
 {
   pimpl_->class_names = class_names;
   pimpl_->num_classes = static_cast<int>(class_names.size());
-  RCLCPP_INFO(get_logger(), "Set %d class names for YOLOX model", pimpl_->num_classes);
+  MODEL_INFO("Set {} class names for YOLOX model", pimpl_->num_classes);
 }
 
 void YoloxModel::set_confidence_threshold(float threshold)
 {
   if (threshold >= 0.0f && threshold <= 1.0f) {
     pimpl_->conf_threshold = threshold;
-    RCLCPP_INFO(get_logger(), "Set confidence threshold to %.2f", threshold);
+    MODEL_INFO("Set confidence threshold to {}", threshold);
   } else {
-    RCLCPP_WARN(
-      get_logger(), "Invalid confidence threshold: %.2f (must be between 0.0 and 1.0)", threshold);
+    MODEL_WARN("Invalid confidence threshold: {} (must be between 0.0 and 1.0)", threshold);
   }
 }
 
@@ -65,10 +64,9 @@ void YoloxModel::set_iou_threshold(float threshold)
 {
   if (threshold >= 0.0f && threshold <= 1.0f) {
     pimpl_->iou_threshold = threshold;
-    RCLCPP_INFO(get_logger(), "Set IoU threshold to %.2f", threshold);
+    MODEL_INFO("Set IoU threshold to {}", threshold);
   } else {
-    RCLCPP_WARN(
-      get_logger(), "Invalid IoU threshold: %.2f (must be between 0.0 and 1.0)", threshold);
+    MODEL_WARN("Invalid IoU threshold: {} (must be between 0.0 and 1.0)", threshold);
   }
 }
 
@@ -99,11 +97,11 @@ std::unique_ptr<ModelResult> YoloxModel::postprocess(const std::vector<cv::Mat> 
   auto result = std::make_unique<YOLOXDetectionResult>();
 
   if (output_tensors.empty()) {
-    RCLCPP_ERROR(get_logger(), "Empty output from YOLOX model");
+    MODEL_ERROR("Empty output from YOLOX model");
     return result;
   }
 
-  RCLCPP_DEBUG(get_logger(), "Processing %zu output tensors", output_tensors.size());
+  MODEL_DEBUG("Processing {} output tensors", output_tensors.size());
 
   // Prepare vectors for detection data
   std::vector<cv::Rect2f> bboxes;
@@ -119,7 +117,7 @@ std::unique_ptr<ModelResult> YoloxModel::postprocess(const std::vector<cv::Mat> 
     const cv::Mat & tensor = output_tensors[tensor_idx];
 
     if (tensor.empty()) {
-      RCLCPP_WARN(get_logger(), "Empty tensor at index %zu", tensor_idx);
+      MODEL_WARN("Empty tensor at index {}", tensor_idx);
       continue;
     }
 
@@ -129,9 +127,9 @@ std::unique_ptr<ModelResult> YoloxModel::postprocess(const std::vector<cv::Mat> 
       int height = tensor.size[2];
       int width = tensor.size[3];
 
-      RCLCPP_DEBUG(
-        get_logger(), "Processing tensor %zu with shape [%d, %d, %d, %d]", tensor_idx,
-        tensor.size[0], channels, height, width);
+      MODEL_DEBUG(
+        "Processing tensor {} with shape [{}, {}, {}, {}]", tensor_idx, tensor.size[0], channels,
+        height, width);
 
       // Each grid cell predicts one object
       float stride = (float)input_w / width;  // Assuming square input
@@ -202,15 +200,14 @@ std::unique_ptr<ModelResult> YoloxModel::postprocess(const std::vector<cv::Mat> 
         }
       }
     } else {
-      RCLCPP_WARN(
-        get_logger(), "Unexpected tensor format at index %zu. Dims: %d", tensor_idx, tensor.dims);
+      MODEL_WARN("Unexpected tensor format at index {}. Dims: {}", tensor_idx, tensor.dims);
     }
   }
 
   // Apply Non-Maximum Suppression
   std::vector<int> indices = Utils::non_maximum_suppression(
     bboxes, confidences, pimpl_->conf_threshold, pimpl_->iou_threshold);
-  RCLCPP_DEBUG(get_logger(), "NMS returned %zu indices", indices.size());
+  MODEL_DEBUG("NMS returned {} indices", indices.size());
 
   // Process the kept detections
   float best_score = 0.0f;
@@ -242,17 +239,17 @@ std::unique_ptr<ModelResult> YoloxModel::postprocess(const std::vector<cv::Mat> 
     result->detections.push_back(detection);
     best_score = std::max(best_score, detection.confidence);
 
-    RCLCPP_DEBUG(
-      get_logger(), "Final detection: %s at: %d, %d, %d, %d with score %0.2f",
-      detection.class_name.c_str(), detection.bbox.x, detection.bbox.y, detection.bbox.width,
-      detection.bbox.height, detection.confidence);
+    MODEL_DEBUG(
+      "Final detection: {} at: {}, {}, {}, {} with score {}", detection.class_name.c_str(),
+      detection.bbox.x, detection.bbox.y, detection.bbox.width, detection.bbox.height,
+      detection.confidence);
   }
 
   // Set highest confidence as overall score
   result->score = indices.empty() ? 0.0f : best_score;
 
   if (indices.empty()) {
-    RCLCPP_DEBUG(get_logger(), "No detections passed NMS");
+    MODEL_DEBUG("No detections passed NMS");
   }
 
   return result;
