@@ -205,8 +205,8 @@ std::unique_ptr<ModelResult> YoloxModel::postprocess(const std::vector<cv::Mat> 
   }
 
   // Apply Non-Maximum Suppression
-  std::vector<int> indices = Utils::non_maximum_suppression(
-    bboxes, confidences, pimpl_->conf_threshold, pimpl_->iou_threshold);
+  std::vector<int> indices = Utils::non_maximum_suppression_batched(
+    bboxes, confidences, class_ids, pimpl_->conf_threshold, pimpl_->iou_threshold);
   MODEL_DEBUG("NMS returned {} indices", indices.size());
 
   // Process the kept detections
