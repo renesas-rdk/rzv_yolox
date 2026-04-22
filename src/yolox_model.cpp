@@ -39,6 +39,9 @@ YoloxModel::YoloxModel() : BaseModel(), pimpl_(std::make_unique<Impl>())
 
   // Default class names (can be overridden with set_class_names)
   pimpl_->class_names = {"empty"};
+
+  // Set default padding color (YOLOX uses 114 for all channels)
+  this->set_padding_color(cv::Scalar(114, 114, 114));
 }
 
 YoloxModel::~YoloxModel() = default;

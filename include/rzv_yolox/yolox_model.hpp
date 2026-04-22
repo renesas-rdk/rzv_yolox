@@ -64,6 +64,7 @@ public:
 protected:
   cv::Mat preprocess(const ModelInput & input) override;
   cv::Mat fallback_preprocess(const ModelInput & input) override;
+  bool get_letterbox_center_align() const override { return false; } // YOLOX typically does not use center-aligned letterboxing
   std::unique_ptr<ModelResult> postprocess(const std::vector<cv::Mat> & output_tensors) override;
 
 private:
